@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Black Ness — Player (Host)</title>
+  <style>
+    body{font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; padding:18px; background:#0b0b0b; color:#f6f6f6}
+    .card{background:#111;padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.6)}
+    h1{margin:0 0 10px;font-size:20px}
+    .status{font-size:13px;opacity:.8}
+    .controls{margin-top:12px}
+    button{padding:8px 12px;border-radius:8px;border:0;background:#222;color:#fff;margin-right:8px}
+    .list{margin-top:12px}
+    .list button{display:block;width:100%;text-align:left;margin:6px 0;padding:10px}
+    small{display:block;opacity:.7}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Black Ness — Player (Host)</h1>
+    <div class="status">Status: <span id="status">idle</span></div>
+
+    <div class="controls">
+      <label>Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.9"/></label>
+      <div style="margin-top:8px">
+        <button id="stop">STOP</button>
+        <button id="pause">PAUSE/RESUME</button>
+      </div>
+      <small>Make sure this device is connected to the tiny speaker via Bluetooth and that the browser has permission to play audio.</small>
+    </div>
+
+    <div class="list">
+      <h3>Available tracks</h3>
+      <div id="tracks"></div>
+    </div>
+
+    <div style="margin-top:12px;font-size:13px;opacity:.8">
+      Controller URL: <span id="controllerUrl">(paste controller URL here)</span>
+      <div><small>To let guests control remotely: create a Firebase Realtime Database and put its config below (instructions in README).</small></div>
+    </div>
+  </div>
+
+  <audio id="player" preload="auto"></audio>
+
+  <script>
+    const TRACKS = [
+      {id:'lore1', title:'Lore — Whispered Origin', url:'audio/lore1.mp3'},
+      {id:'lore2', title:'Lore — The Blacked River', url:'audio/lore2.mp3'},
+      {id:'song1', title:'Song — Night Chant', url:'audio/song1.mp3'}
+    ];
+
+    const FIREBASE_CONFIG = null; // fill with your Firebase info later if needed
+    const FIREBASE_COMMAND_PATH = '/blackness/command';
+
+    const player = document.getElementById('player');
+    const tracksDiv = document.getElementById('tracks');
+    const statusEl = document.getElementById('status');
+    const vol = document.getElementById('vol');
+    const stopBtn = document.getElementById('stop');
+    const pauseBtn = document.getElementById('pause');
+
+    vol.addEventListener('input', ()=>{ player.volume = parseFloat(vol.value); });
+    player.volume = parseFloat(vol.value);
+
+    stopBtn.onclick = ()=>{ player.pause(); player.currentTime=0; status('stopped'); };
+    pauseBtn.onclick = ()=>{ if(player.paused) player.play(); else player.pause(); status(player.paused?'paused':'playing'); };
+
+    function status(s){ statusEl.textContent = s; }
+
+    TRACKS.forEach(t=>{
+      const b = document.createElement('button');
+      b.textContent = t.title;
+      b.onclick = ()=>playTrack(t);
+      tracksDiv.appendChild(b);
+    });
+
+    function playTrack(t){
+      player.src = t.url;
+      player.play().then(()=> status('playing: '+t.title)).catch(()=>status('tap to start audio'));
+    }
+
+    document.addEventListener('click', ()=>{ if(player.src && player.paused) player.play().catch(()=>{}); });
+  </script>
+</body>
+</html>
