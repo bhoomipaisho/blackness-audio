@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Black Ness — Quick Player</title>
+<style>
+  :root{
+    --bg:#070707; --card:#111; --muted:#bdbdbd;
+  }
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#fff}
+  .wrap{max-width:900px;margin:18px auto;padding:14px}
+  header{display:flex;align-items:center;gap:12px}
+  h1{font-size:1.1rem;margin:0}
+  p.lead{margin:6px 0 14px;opacity:.85;font-size:.95rem}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .card{
+    background:var(--card);border-radius:14px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,.6);cursor:pointer;user-select:none;touch-action:manipulation;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:active{transform:scale(.99)}
+  .icon{
+    width:96px;height:96px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);display:flex;
+    align-items:center;justify-content:center;overflow:hidden;
+  }
+  .icon img{width:100%;height:100%;object-fit:cover;display:block}
+  .icon .fallback{font-size:40px}
+  .title{font-weight:600;font-size:.95rem;text-align:center}
+  .sub{font-size:.84rem;opacity:.78}
+  .player{position:fixed;left:12px;right:12px;bottom:12px;background:#0b0b0b;border-radius:12px;padding:10px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+  .player .meta{flex:1;min-width:0}
+  .now{font-size:0.98rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .controls{display:flex;gap:8px;align-items:center}
+  button.icon-btn{background:#222;border:0;border-radius:10px;padding:10px 12px;color:#fff;font-weight:600}
+  .progress{height:6px;background:#222;border-radius:6px;margin-top:8px;overflow:hidden}
+  .bar{height:100%;width:0%;background:linear-gradient(90deg,#7a2,#3b8)}
+  small.hint{display:block;opacity:.8;margin-top:8px;text-align:center}
+  @media (max-width:420px){ .icon{width:80px;height:80px} .card{padding:8px} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div style="flex:1">
+        <h1>🖤 Black Ness — Tap to play</h1>
+        <p class="lead">Scan the QR, tap a tile and the audio will play on your phone.</p>
+      </div>
+    </header>
+
+    <div id="grid" class="grid" aria-live="polite"></div>
+
+    <small class="hint">If playback doesn't start, tap anywhere on the page to allow audio (mobile autoplay policy).</small>
+  </div>
+
+  <!-- sticky player -->
+  <div class="player" id="playerUI" style="display:none">
+    <div style="width:72px;height:72px;border-radius:10px;overflow:hidden;background:#121212" id="playerIcon"></div>
+    <div class="meta">
+      <div class="now" id="now">Now playing</div>
+      <div class="sub" id="subtitle"></div>
+      <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
+    </div>
+    <div class="controls">
+      <button id="prev" class="icon-btn" title="Previous">⏮</button>
+      <button id="play" class="icon-btn" title="Play/Pause">▶️</button>
+      <button id="next" class="icon-btn" title="Next">⏭</button>
+    </div>
+  </div>
+
+  <audio id="audio" preload="auto"></audio>
+
+<script>
+  // === EDIT THIS TRACK LIST as needed ===
+  const TRACKS = [
+    {id:'lore1', title:'Lore — Whispered Origin', url:'audio/lore1.mp3', subtitle:'A short chilling whisper (1:02)'},
+    {id:'lore2', title:'Lore — The Blacked River', url:'audio/lore2.mp3', subtitle:'The legend of the river (1:34)'},
+    {id:'song1', title:'Song — Night Chant', url:'audio/song1.mp3', subtitle:'A haunting chant (2:05)'}
+  ];
+  // ======================================
+
+  const grid = document.getElementById('grid');
+  const audio = document.getElementById('audio');
+  const playerUI = document.getElementById('playerUI');
+  const nowEl = document.getElementById('now');
+  const subtitleEl = document.getElementById('subtitle');
+  const bar = document.getElementById('bar');
+  const playerIcon = document.getElementById('playerIcon');
+  const playBtn = document.getElementById('play');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+
+  let currentIndex = -1;
+
+  // Build the icon grid
+  TRACKS.forEach((t, i) => {
+    const card = document.createElement('button');
+    card.className = 'card';
+    card.type = 'button';
+    card.setAttribute('aria-label', t.title);
+    card.innerHTML = `
+      <div class="icon" data-id="${t.id}">
+        <img src="icons/${t.id}.png" alt="${t.title} icon" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\\'fallback\\'>🎙️</div>'">
+      </div>
+      <div class="title">${t.title}</div>
+      <div class="sub">${t.subtitle || ''}</div>
+    `;
+    card.onclick = ()=> playIndex(i);
+    grid.appendChild(card);
+  });
+
+  function showPlayer(){ playerUI.style.display = 'flex'; }
+  function hidePlayer(){ playerUI.style.display = 'none'; }
+
+  function updatePlayerUI(){
+    if(currentIndex < 0){ hidePlayer(); return; }
+    const t = TRACKS[currentIndex];
+    nowEl.textContent = t.title;
+    subtitleEl.textContent = t.subtitle || '';
+    // set icon
+    playerIcon.innerHTML = `<img src="icons/${t.id}.png" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.parentElement.textContent='🎙️'">`;
+    showPlayer();
+  }
+
+  function playIndex(i){
+    if(i < 0 || i >= TRACKS.length) return;
+    const t = TRACKS[i];
+    currentIndex = i;
+    audio.src = t.url;
+    audio.play().catch(()=> { /* mobile may require gesture, but tap already happened */ });
+    updatePlayerUI();
+  }
+
+  playBtn.onclick = ()=>{
+    if(audio.paused) audio.play(); else audio.pause();
+  };
+  prevBtn.onclick = ()=> {
+    if(currentIndex <= 0) return;
+    playIndex(currentIndex - 1);
+  };
+  nextBtn.onclick = ()=> {
+    if(currentIndex >= TRACKS.length - 1) return;
+    playIndex(currentIndex + 1);
+  };
+
+  audio.addEventListener('play', ()=> playBtn.textContent = '⏸');
+  audio.addEventListener('pause', ()=> playBtn.textContent = '▶️');
+  audio.addEventListener('ended', ()=> {
+    // auto-advance
+    if(currentIndex < TRACKS.length - 1){
+      playIndex(currentIndex + 1);
+    } else {
+      audio.currentTime = 0;
+      audio.pause();
+    }
+  });
+
+  audio.addEventListener('timeupdate', ()=>{
+    if(!audio.duration || audio.duration === Infinity) return;
+    const pct = (audio.currentTime / audio.duration) * 100;
+    bar.style.width = pct + '%';
+  });
+
+  // allow initial user gesture anywhere
+  document.addEventListener('click', ()=> {
+    // unlocking autoplay on some browsers
+    if(audio.src && audio.paused) audio.play().catch(()=>{});
+  }, {once:true});
+
+  // keyboard support (space toggles play/pause)
+  document.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){
+      e.preventDefault();
+      if(audio.paused) audio.play(); else audio.pause();
+    }
+  });
+</script>
+</body>
+</html>
