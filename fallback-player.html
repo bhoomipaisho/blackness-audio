@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Black Ness — Mini Player</title>
+<style>
+body{font-family:system-ui;padding:16px;background:#070707;color:#f2f2f2}
+button{padding:10px;border-radius:8px;border:0;background:#222;color:#fff;margin:8px 0;display:block;width:100%}
+</style>
+</head>
+<body>
+<h1>Black Ness — Mini Player</h1>
+<p>Tap a track to play on your phone.</p>
+<div id="list"></div>
+<audio id="a" controls style="width:100%"></audio>
+<script>
+const TRACKS=[
+  {id:'lore1',title:'Lore — Whispered Origin',url:'audio/lore1.mp3'},
+  {id:'lore2',title:'Lore — The Blacked River',url:'audio/lore2.mp3'},
+  {id:'song1',title:'Song — Night Chant',url:'audio/song1.mp3'}
+];
+const list=document.getElementById('list'), a=document.getElementById('a');
+TRACKS.forEach(t=>{
+  const b=document.createElement('button');
+  b.textContent=t.title;
+  b.onclick=()=>{a.src=t.url; a.play().catch(()=>{});};
+  list.appendChild(b);
+});
+</script>
+</body>
+</html>
