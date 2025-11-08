@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Black Ness — Controller</title>
+  <style>
+    body{font-family:system-ui;padding:18px;background:#050505;color:#f1f1f1}
+    h1{font-size:20px}
+    .track{background:#111;padding:10px;border-radius:8px;margin:8px 0}
+    button{padding:8px 10px;border-radius:8px;border:0;background:#222;color:#fff}
+    small{opacity:.75;display:block}
+  </style>
+</head>
+<body>
+  <h1>Black Ness — Controller</h1>
+  <div id="list"></div>
+  <div style="margin-top:12px"><button id="stop">STOP</button></div>
+
+  <script>
+    const TRACKS = [
+      {id:'lore1', title:'Lore — Whispered Origin'},
+      {id:'lore2', title:'Lore — The Blacked River'},
+      {id:'song1', title:'Song — Night Chant'}
+    ];
+
+    const FIREBASE_CONFIG = null; // paste your config object here
+    const FIREBASE_COMMAND_PATH = '/blackness/command';
+
+    const list = document.getElementById('list');
+    TRACKS.forEach(t=>{
+      const d = document.createElement('div'); d.className='track';
+      const title = document.createElement('div'); title.textContent = t.title; d.appendChild(title);
+      const btn = document.createElement('button'); btn.textContent='Play on speaker';
+      btn.onclick = ()=>sendCommand({action:'play', id:t.id, ts:Date.now()});
+      d.appendChild(btn);
+      list.appendChild(d);
+    });
+
+    document.getElementById('stop').onclick = ()=>sendCommand({action:'stop', ts:Date.now()});
+
+    function sendCommand(obj){
+      alert('Remote control not configured yet — ask host to set up Firebase!');
+    }
+  </script>
+</body>
+</html>
